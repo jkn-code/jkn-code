@@ -1,6 +1,6 @@
 ### Hi there 👋
 
-[https://github.com/jkn-code]
+(https://github.com/jkn-code)
 
 <!--
 **jkn-code/jkn-code** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
