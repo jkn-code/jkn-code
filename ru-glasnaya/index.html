@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Букыв</title>
+</head>
+
+<body>
+    <style>
+        body {
+            background-color: rgb(92, 101, 131);
+            margin: 20px;
+            text-align: center;
+            font-family: Tahoma;
+            color: #fff;
+        }
+
+        .win {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn {
+            color: #555;
+            display: inline-block;
+            width: 100px;
+            padding: 10px;
+            margin-top: 10px;
+            background: linear-gradient(#fff, #aaa);
+            border-radius: 5px;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: linear-gradient(#ddd, #fff);
+        }
+
+        .inp {
+            width: 50px;
+            border: 1px solid white;
+            background-color: #fff;
+            margin-top: 30px;
+            padding: 5px;
+            text-align: center;
+            font-size: 20px;
+            color: #555;
+        }
+
+        h1 a {
+            color: white;
+            text-decoration: none;
+        }
+
+        #text {
+            width: 80%;
+            max-width: 400px;
+            text-align: left;
+        }
+    </style>
+
+    <div class="win">
+        <h1><a href="">Букыв</a></h1>
+        <textarea class="inp" id="text" cols="30" rows="10" onchange="change()"></textarea>
+        <br>
+        Гласная буква: <input type="text" class="inp" id="letter" onchange="change()">
+        <br><br>
+        <span class="btn end" onclick="speak()" style="width: 83%">Читать</span>
+    </div>
+
+
+    <script>
+
+        lettersg = 'уеыаоэяию'
+        lettersG = 'УЕЫАОЭЯИЮ'
+        const synth = window.speechSynthesis
+        synth.cancel()
+
+        letter.value = lettersg[Math.floor(Math.random() * lettersg.length)]
+
+        const change = () => {
+            let s = ''
+            for(c in text.value) {
+                if (lettersg.indexOf(text.value[c]) > -1) s += letter.value
+                else if (lettersG.indexOf(text.value[c]) > -1) s += letter.value.toUpperCase()
+                else s += text.value[c]      
+            }
+            text.value = s
+        }
+
+        const extx = [
+            `Однажды, в студеную зимнюю пору
+Я из лесу вышел; был сильный мороз.
+Гляжу, поднимается медленно в гору
+Лошадка, везущая хворосту воз.`,
+            `Миллион, миллион, миллион алых роз
+Из окна, из окна, из окна видишь ты.
+Кто влюблен, кто влюблен, кто влюблен и всерьез,
+Свою жизнь для тебя превратит в цветы.`,
+            `Но если есть в кармане пачка сигарет,
+Значит, всё не так уж плохо на сегодняшний день,
+И билет на самолёт с серебристым крылом,
+Что, взлетая, оставляет земле лишь тень`,
+        ]
+
+        text.value = extx[Math.floor(Math.random() * extx.length)]
+
+        change() 
+
+        const speak = () => {
+            synth.cancel()
+            synth.speak(new SpeechSynthesisUtterance(text.value))
+        }
+    </script>
+</body>
+
+</html>
