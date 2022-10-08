@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script src="MGMQ.js"></script>
+    <script src="../MGMQ.js"></script>
 </head>
 <body>
     <script>
@@ -17,7 +17,7 @@
 
         MQ.var.candies = 0
 
-        MQ.page['Старт'] = {
+        MQ.pages['Старт'] = {
             text: `Перед тобой лежат конфеты`,
             img: 'Img/candies.jpg',
             btns: [
@@ -34,7 +34,7 @@
             ]
         }
 
-        MQ.page['Взять'] = {
+        MQ.pages['Взять'] = {
             text: `У тебя теперь %candies% конфет.`,
             img: 'Img/candies2.jpg',
             btns: [
@@ -65,7 +65,7 @@
             ]
         }
 
-        MQ.page['Хватит'] = {
+        MQ.pages['Хватит'] = {
             text: `Ладно.`,
             img: 'Img/candies3.jpg',
         }

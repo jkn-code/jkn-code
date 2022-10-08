@@ -1,15 +1,17 @@
 
 class MGMQ {
     constructor(params) {
-        this.params = params
-        this.page = {}
+        this.params = params || {}
+        this.pages = {}
         this.text = ''
         this.var = {}
         this.keys = []
-        this._load()
+        this._ends = []
+        setTimeout(() => this._load(), 0) // for body
     }
 
     _load() {
+        this._parseText()
 
         const style = document.createElement('style')
         style.type = 'text/css'
@@ -27,29 +29,26 @@ class MGMQ {
             max-width: 600px;
             min-height: 100vh;
         }
-        .img {
-            position: relative;
+        #mqImg {
             opacity: 0;
         }
-        .img img {
+        #mqImg img {
             width: 100%;
+            display: block;
         }
-        .text {
-            position: relative;
+        #mqText {
             padding: 20px;
             line-height: 25px;
-            opacity: 0;
             text-align: justify;
         }
-        .text p {
+        #mqText p {
             text-indent: 40px;
         }
-        .btns {
+        #mqBtns {
             margin: 50px 0 100px 0;
             opacity: 0;
         }
         .btn {
-            position: relative;
             padding: 20px;
             margin: 10px;
             border: 1px solid `+ (this.params.borderColor || this.params.textColor || '#0005') + `;
@@ -60,10 +59,10 @@ class MGMQ {
         .btn:hover {
             background-color: #0002;
         }
-        .footer {
+        #mqFooter {
             height: 1px;
         }
-        #openMenu {
+        #mqOpenMenu {
             position: fixed;
             top: 5px;
             right: 5px;
@@ -75,7 +74,7 @@ class MGMQ {
             cursor: pointer;
             z-idex: 10;
         }
-        #menu {
+        #mqMenu {
             position: fixed;
             top: 5px;
             right: 5px;
@@ -86,29 +85,45 @@ class MGMQ {
             width: 200px;
             color: #000;
         }
-        #menu div {
+        #mqMenu div {
             text-align: center;
             padding: 10px;
             cursor: pointer;
             border-bottom: 1px solid #0002;
             transition: 0.3s;
         }
-        #menu div:hover {
+        #mqMenu div:hover {
             color: #0a0;
         }
-        #loadQ {
+        #_loadQ {
             max-height: 60vh;
             overflow-y: auto;
         }
-        #menu span {
+        #mqMenu span {
             display: block;
             padding: 10px;
         }
-        #countQ {
+        #_countQ {
             position: absolute;
             right: -5px;
             top: -5px;
             font-size: 12px;
+        }
+        #mqLoading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 500px;
+        }
+        #mqEnds {
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 40px;
+            line-height: 70px;
+        }
+        #mqEnds span {
+            padding: 10px 15px
         }
         @media(max-width: 600px) {
             .plane {
@@ -119,18 +134,20 @@ class MGMQ {
         style.appendChild(document.createTextNode(css))
         document.head.appendChild(style)
 
-        document.body.innerHTML = `<div class="plane">
-            <div class="img"></div>
-            <div class="text"></div>
-            <div class="btns"></div>
-            <div class="footer"></div>
-            <div id="openMenu"></div>
-            <div id="menu">
-                <span id="countQ">0</span>
+        document.body.innerHTML += `<div class="plane">
+            <div id="mqImg"></div>
+            <div id="mqText"></div>
+            <div id="mqBtns"></div>
+            <div id="mqEnds"></div>
+            <div id="mqFooter"></div>
+            <div id="mqLoading"></div>
+            <div id="mqOpenMenu"></div>
+            <div id="mqMenu">
+                <span id="_countQ">0</span>
                 <div id="newQ">New</div>
                 <div id="saveQ">Save</div>
                 <span>Load:</span>
-                <loads id="loadQ"></loads>
+                <loads id="_loadQ"></loads>
             </div>
         </div>`
 
@@ -139,10 +156,17 @@ class MGMQ {
             document.body.style.color = this.params.textColor
             document.querySelector('.plane').style.borderColor = this.params.textColor
             const rgb = document.body.style.color.replace(/^rgba?\(|\s+|\)$/g, '').split(',');
-            style.appendChild(document.createTextNode('.btn:hover { background-color: rgba('+ rgb[0] +','+ rgb[1] +','+ rgb[2] +', 0.1); }'))
-            document.head.appendChild(style)    
+            style.appendChild(document.createTextNode('.btn:hover { background-color: rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ', 0.1); }'))
+            document.head.appendChild(style)
         }
         if (this.params.borderColor) document.querySelector('.plane').style.borderColor = this.params.borderColor
+
+        document.title = this.params.name
+
+        const meta = document.createElement('meta')
+        meta.name = 'viewport'
+        meta.content = 'width=device-width, initial-scale=1.0'
+        document.head.appendChild(meta)
 
         if (this.params.icon) {
             let link = document.createElement('link')
@@ -155,52 +179,47 @@ class MGMQ {
     }
 
     _init() {
-        this._parseText()
-
         this._page = {}
-        this.goto = this.params.start || this._firstJ(this.page)
-        this._page = this.page[this.goto]
-
-        if (!document.createElement('title')) document.createElement('title')
-        document.title = this.params.name
+        this.goto = this.params.start || this._firstJ(this.pages)
+        this._page = this.pages[this.goto]
+        this._num = 0
 
         let noPages = []
         let gotos = []
         let noGotoPage = []
         let countP = 0
-        for (const j in this.page) {
-            if (this.page[j].btns)
-                this.page[j].btns.forEach(b => {
-                    if (!this.page[b.goto]) noPages.push(j + '=>' + b.goto)
+        for (const j in this.pages) {
+            if (this.pages[j].btns)
+                this.pages[j].btns.forEach(b => {
+                    if (!this.pages[b.goto]) noPages.push(j + '=>' + b.goto)
                     if (b.goto) gotos.push(b.goto)
                 })
             countP++
         }
-        for (const j in this.page)
+        for (const j in this.pages)
             if (gotos.indexOf(j) == -1) noGotoPage.push(j)
 
         if (noPages.length > 0) console.log('No page: ' + noPages.join(', ') + '.')
         if (noGotoPage.length > 0) console.log('No goto: ' + noGotoPage.join(', ') + '.')
 
-        this._plane = document.querySelector('.plane')
-        this._text = document.querySelector('.text')
-        this._img = document.querySelector('.img')
-        this._btns = document.querySelector('.btns')
-        this._btns.addEventListener('click', e => this._btnClick(e))
+        mqBtns.addEventListener('click', e => this._btnClick(e))
+        mqEnds.addEventListener('click', e => this._endClick(e))
+
+        if (this.params.filter) mqImg.style.filter = this.params.filter;
 
         newQ.onclick = () => this._newQ()
         saveQ.onclick = () => this._saveQ()
 
         document.body.onclick = (e) => {
-            if (e.target.id == 'openMenu') this._openMenu()
+            if (e.target.id == 'mqOpenMenu') this._openMenu()
             else {
-                openMenu.style.display = 'block'
-                menu.style.display = 'none'
+                mqOpenMenu.style.display = 'block'
+                mqMenu.style.display = 'none'
             }
             if (e.target.classList.contains('load')) this._loadQ(e)
         }
 
-        countQ.innerHTML = countP
+        _countQ.innerHTML = countP
 
         this._getSave()
         this._loading()
@@ -208,27 +227,33 @@ class MGMQ {
 
     _loading() {
         let imgs = 0, load = 0
-        for (const j in this.page) if (this.page[j].img) {
-            const src = this.page[j].img
-            this.page[j].img = new Image()
-            this.page[j].img.src = src
-            this.page[j].img.onload = () => load++
+        for (const j in this.pages) if (this.pages[j].img) {
+            const src = this.pages[j].img
+            this.pages[j].img = new Image()
+            this.pages[j].img.src = src
+            this.pages[j].img.onload = () => load++
             imgs++
         }
+
         const iv = setInterval(() => {
+            mqLoading.innerHTML = ''
+            for (let i = 0; i < imgs - load; i++)
+                mqLoading.innerHTML += '. '
+
             if (imgs == load) {
                 clearInterval(iv)
                 this._setPage()
             }
-        }, 50);
+        }, 10);
     }
 
     _btnClick(e) {
         if (this._noClick) return
         this._noClick = true
-        this.goto = e.target.getAttribute('goto')
+        const goto = e.target.getAttribute('goto')
         const idx = e.target.getAttribute('idx')
-        if (this.goto) {
+        if (goto) {
+            this.goto = goto
             const btn = this._page.btns[idx]
             if (btn.click) btn.click(btn)
             if (btn.setKey) {
@@ -237,17 +262,39 @@ class MGMQ {
                 if (str2[0] == '!' && this.keys.indexOf(str2.substr(1)) > -1) this.keys = this.keys.filter(e => e !== str2.substr(1))
             }
             if (btn.setKeyLine) btn.setKeyLine()
-            this._page = this.page[this.goto]
+            this._page = this.pages[this.goto]
             if (this._page) this._shift('out')
             else console.log('PAIGE NO')
         }
     }
 
+    _endClick(e) {
+        if (this._noClick) return
+        const goto = e.target.getAttribute('goto')
+        if (goto) {
+            if (confirm('To ending?')) {
+                this._noClick = true
+                this.goto = goto
+                this._page = this.pages[this.goto]
+                if (this._page) this._shift('out')
+                else console.log('PAIGE NO')
+            }
+        }
+        if (e.target.innerHTML == 'X') {
+            if (confirm('Clear?')) {
+                this._save.ends = []
+                this._saveE()
+                location.href = ''
+            }
+        }
+    }
+
     _setPage() {
         window.scrollTo({ top: 0 })
-        this._text.innerHTML = ''
-        this._img.innerHTML = ''
-        this._btns.innerHTML = ''
+        mqText.innerHTML = ''
+        mqImg.innerHTML = ''
+        mqBtns.innerHTML = ''
+        mqEnds.innerHTML = ''
         this._noClick = false
 
         this._hideBtn = []
@@ -255,20 +302,21 @@ class MGMQ {
         if (!this._page) return
 
         if (this._page.img && this._page.img != '')
-            this._img.appendChild(this._page.img)
+            mqImg.appendChild(this._page.img)
 
-        if (this._page.text && this._page.text != '') {
-            let text = this._page.text
-            const mv = text.split('%')
+        if (this._page.text && this._page.text.trim() != '') {
+            let tx = this._page.text
+            const mv = tx.split('%')
             let t = true
             mv.forEach((vt, i) => {
                 if (!t) mv[i] = this.var[vt]
                 t = !t
             })
-            text = mv.join('')
-            let mt = text.split('\n')
-            this._text.innerHTML = '<p>' + mt.join('<br></p><p>') + '</p>'
-        }
+            tx = mv.join('')
+            let mt = tx.split('\n')
+            mqText.style.display = 'block'
+            mqText.innerHTML = '<p>' + mt.join('<br></p><p>') + '</p>'
+        } else mqText.style.display = 'none'
 
         if (this._page.btns) {
             this._page.btns.forEach((btn, idx) => {
@@ -287,9 +335,27 @@ class MGMQ {
                 bd.innerHTML = btn.text
                 bd.setAttribute('goto', btn.goto)
                 bd.setAttribute('idx', idx)
-                this._btns.appendChild(bd)
+                mqBtns.appendChild(bd)
+                mqBtns.style.display = 'block'
             })
+        } else mqBtns.style.display = 'none'
+
+        if (this._page._endName) {
+            if (this._save.ends.indexOf(this._page._endName) == -1)
+                this._save.ends.push(this._page._endName)
+            this._saveE()
         }
+
+        if (this._num == 0 && this._ends.length > 0) {
+            let s = ''
+            this._ends.forEach((e, i) => {
+                if (this._save.ends.indexOf(e) > -1)
+                    s += '<span class="btn" goto="' + e + '">' + (i + 1) + '</span> '
+                else s += '<span class="btn">_</span> '
+            })
+            mqEnds.innerHTML = s + '<br><span class="btn">X</span>'
+        } else mqEnds.style.display = 'none'
+        this._num++
 
         this._shift('in')
     }
@@ -298,13 +364,10 @@ class MGMQ {
         let opacity
         if (to == 'in') opacity = 0
         if (to == 'out') opacity = 1
-        this._img.style.opacity = opacity
-        this._text.style.opacity = opacity
-        this._btns.style.opacity = opacity
+        mqImg.style.opacity = opacity
+        mqText.style.opacity = opacity
+        mqBtns.style.opacity = opacity
         let f = setInterval(() => {
-            this._img.style.opacity = opacity
-            this._text.style.opacity = opacity
-            this._btns.style.opacity = opacity
             if (to == 'out') {
                 opacity -= 0.05
                 if (opacity <= 0) {
@@ -318,6 +381,9 @@ class MGMQ {
                     clearInterval(f)
                 }
             }
+            mqImg.style.opacity = opacity
+            mqText.style.opacity = opacity
+            mqBtns.style.opacity = opacity
         }, 20);
     }
 
@@ -327,16 +393,17 @@ class MGMQ {
 
     _openMenu() {
         this._getSave()
-        openMenu.style.display = 'none'
-        menu.style.display = 'block'
-        loadQ.innerHTML = ''
-        for (let i = this._save.length - 1; i >= 0; i--)
-            loadQ.innerHTML += '<div class="load">' + this._save[i].name + '</div>'
+        mqOpenMenu.style.display = 'none'
+        mqMenu.style.display = 'block'
+        _loadQ.innerHTML = ''
+        for (let i = this._save.saves.length - 1; i >= 0; i--)
+            _loadQ.innerHTML += '<div class="load">' + this._save.saves[i].name + '</div>'
     }
 
     _getSave() {
+        // localStorage.removeItem('MGMQ')
         const allSave = JSON.parse(localStorage['MGMQ'] || '{}')
-        this._save = allSave[decodeURI(location.pathname)] || []
+        this._save = allSave[decodeURI(location.pathname)] || { saves: [], ends: [] }
     }
 
     _newQ() {
@@ -350,8 +417,8 @@ class MGMQ {
         if (name = prompt('Name', name)) {
             const allSave = JSON.parse(localStorage['MGMQ'] || '{}')
             const path = decodeURI(location.pathname)
-            if (!allSave[path]) allSave[path] = []
-            allSave[path].push({
+            if (!allSave[path]) allSave[path] = { saves: [], ends: [] }
+            allSave[path].saves.push({
                 name: name,
                 goto: this.goto,
                 var: this.var,
@@ -362,13 +429,21 @@ class MGMQ {
         }
     }
 
+    _saveE() {
+        const allSave = JSON.parse(localStorage['MGMQ'] || '{}')
+        const path = decodeURI(location.pathname)
+        if (!allSave[path]) allSave[path] = { saves: [], ends: [] }
+        allSave[path].ends = this._save.ends
+        localStorage['MGMQ'] = JSON.stringify(allSave)
+    }
+
     _loadQ(e) {
         if (confirm('Load [' + e.target.textContent + '] ?'))
-            this._save.forEach(save => {
+            this._save.saves.forEach(save => {
                 if (save.name == e.target.textContent) {
                     this.var = save.var
                     this.keys = save.keys
-                    this._page = this.page[save.goto]
+                    this._page = this.pages[save.goto]
                     if (this._page) this._shift('out')
                     else console.log('PAIGE NO')
                 }
@@ -390,7 +465,7 @@ class MGMQ {
     }
 
     _parseText() {
-        if (!this.text || this.text == '') return
+        if (this.text == '') return
 
         const lns = this.text.split('\n')
         let iin = false
@@ -398,54 +473,69 @@ class MGMQ {
         let nBtn = -1
         const newPages = {}
         lns.forEach(ln => {
-            if (name != '' && !newPages[name]) newPages[name] = {}
             const str2 = ln.substr(2).trim()
 
-            if (ln.substr(0, 3) == '***') {
+            if (ln.substr(0, 2) == '//') return
+            if (name != '' && !newPages[name]) newPages[name] = { text: '' }
+
+            if (ln[0] == '>') {
+                if (ln.substr(0, 5) == '>name') this.params.name = ln.substr(5).trim()
+                if (ln.substr(0, 5) == '>back') this.params.bodyColor = ln.substr(5).trim()
+                if (ln.substr(0, 5) == '>text') this.params.textColor = ln.substr(5).trim()
+                if (ln.substr(0, 7) == '>filter') this.params.filter = ln.substr(7).trim()
+                if (ln.substr(0, 3) == '>++') {
+                    if (this._ends.indexOf(name) == -1) this._ends.push(name)
+                    if (newPages[name]) newPages[name]._endName = name
+                }
+            }
+            else if (ln.substr(0, 3) != '***' && name != '') {
+                if (ln.substr(0, 2) == '==') newPages[name].img = str2
+                else if (ln.substr(0, 2) == '--') {
+                    nBtn++
+                    if (!newPages[name].btns) newPages[name].btns = []
+                    if (!newPages[name].btns[nBtn]) newPages[name].btns[nBtn] = {}
+                    newPages[name].btns[nBtn].text = str2
+                }
+                else if (ln.substr(0, 2) == '..') {
+                    if (nBtn > -1) newPages[name].btns[nBtn].goto = str2
+                }
+                else if (ln.substr(0, 2) == '++')
+                    newPages[name].btns[nBtn].setKeyLine = () => {
+                        if (str2[0] != '!' && this.keys.indexOf(str2) == -1) this.keys.push(str2)
+                        if (str2[0] == '!' && this.keys.indexOf(str2.substr(1)) > -1) this.keys = this.keys.filter(e => e !== str2.substr(1))
+                    }
+                else if (ln.substr(0, 2) == '??') {
+                    const btn = newPages[name].btns[nBtn]
+                    newPages[name].btns[nBtn].ifKeyLine = () => {
+                        if (str2[0] != '!' && this.keys.indexOf(str2) == -1) btn.hidden = true
+                        if (str2[0] == '!' && this.keys.indexOf(str2.substr(1)) > -1) btn.hidden = true
+                    }
+                }
+                else if (ln.substr(0, 2) == '^^') newPages[name].text += '<center>' + str2 + '</center>\n'
+                else if (ln.trim() != '') newPages[name].text += ln + '\n'
+            } else {
                 name = ln.substr(3).trim()
                 nBtn = -1
-            } else if (ln.substr(0, 2) == '==') newPages[name].img = str2
-            else if (ln.substr(0, 2) == '--') {
-                nBtn++
-                if (!newPages[name].btns) newPages[name].btns = []
-                if (!newPages[name].btns[nBtn]) newPages[name].btns[nBtn] = {}
-                newPages[name].btns[nBtn].text = str2
-            } else if (ln.substr(0, 2) == '..') newPages[name].btns[nBtn].goto = str2
-            else if (ln.substr(0, 2) == '++')
-                newPages[name].btns[nBtn].setKeyLine = () => {
-                    if (str2[0] != '!' && this.keys.indexOf(str2) == -1) this.keys.push(str2)
-                    if (str2[0] == '!' && this.keys.indexOf(str2.substr(1)) > -1) this.keys = this.keys.filter(e => e !== str2.substr(1))
-                }
-            else if (ln.substr(0, 2) == '??') {
-                const btn = newPages[name].btns[nBtn]
-                newPages[name].btns[nBtn].ifKeyLine = () => {
-                    if (str2[0] != '!' && this.keys.indexOf(str2) == -1) btn.hidden = true
-                    if (str2[0] == '!' && this.keys.indexOf(str2.substr(1)) > -1) btn.hidden = true
-                }
-            } else if (ln.substr(0, 2) != '//' && name != '') {
-                if (!newPages[name].text) newPages[name].text = ''
-                if (ln.trim() != '') newPages[name].text += ln + '\n'
             }
-
         })
 
         for (const j in newPages) {
-            if (this.page[j] && this.page[j].text) newPages[j].text = this.page[j].text
-            if (this.page[j] && this.page[j].img) newPages[j].img = this.page[j].img
-            if (this.page[j] && this.page[j].btns) {
-                this.page[j].btns.forEach((btn, i) => {
+            if (this.pages[j] && this.pages[j].text) newPages[j].text = this.pages[j].text
+            if (this.pages[j] && this.pages[j].img) newPages[j].img = this.pages[j].img
+            if (this.pages[j] && this.pages[j].btns)
+                this.pages[j].btns.forEach((btn, i) => {
                     if (btn.text) newPages[j].btns[i].text = btn.text
                     if (btn.goto) newPages[j].btns[i].goto = btn.goto
                     if (btn.setKey) newPages[j].btns[i].setKey = btn.setKey
                     if (btn.ifKey) newPages[j].btns[i].ifKey = btn.ifKey
                     if (btn.click) newPages[j].btns[i].click = btn.click
                 })
-            }
         }
-        for (const j in this.page)
-            if (!newPages[j]) newPages[j] = this.page[j]
 
-        this.page = newPages
+        for (const j in this.pages)
+            if (!newPages[j]) newPages[j] = this.pages[j]
+
+        this.pages = newPages
     }
 
 }
